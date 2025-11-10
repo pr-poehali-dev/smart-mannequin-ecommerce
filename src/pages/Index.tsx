@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 
 interface Garment {
@@ -24,6 +25,7 @@ const Index = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const { toast } = useToast();
 
   const garments: Garment[] = [
     { id: '1', name: 'Классическая рубашка', category: 'Рубашки', price: '4 990 ₽', priceValue: 4990, color: 'Белый' },
@@ -38,15 +40,31 @@ const Index = () => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === garment.id);
       if (existingItem) {
+        toast({
+          title: "Товар добавлен",
+          description: `${garment.name} (${existingItem.quantity + 1} шт.)`,
+        });
         return prevCart.map(item =>
           item.id === garment.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
+      toast({
+        title: "Товар добавлен в корзину",
+        description: garment.name,
+      });
       return [...prevCart, { ...garment, quantity: 1 }];
     });
   };
 
   const removeFromCart = (id: string) => {
+    const item = cart.find(i => i.id === id);
+    if (item) {
+      toast({
+        title: "Товар удален",
+        description: item.name,
+        variant: "destructive",
+      });
+    }
     setCart(prevCart => prevCart.filter(item => item.id !== id));
   };
 
