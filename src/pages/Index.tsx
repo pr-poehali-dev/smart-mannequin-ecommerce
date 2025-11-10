@@ -1,21 +1,70 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
+
+interface Garment {
+  id: string;
+  name: string;
+  category: string;
+  price: string;
+  priceValue: number;
+  color: string;
+}
+
+interface CartItem extends Garment {
+  quantity: number;
+}
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [selectedGarment, setSelectedGarment] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
 
-  const garments = [
-    { id: '1', name: 'Классическая рубашка', category: 'Рубашки', price: '4 990 ₽', color: 'Белый' },
-    { id: '2', name: 'Брюки чинос', category: 'Брюки', price: '5 990 ₽', color: 'Бежевый' },
-    { id: '3', name: 'Шерстяной свитер', category: 'Свитера', price: '7 990 ₽', color: 'Серый' },
-    { id: '4', name: 'Джинсы slim fit', category: 'Джинсы', price: '6 490 ₽', color: 'Синий' },
-    { id: '5', name: 'Кардиган', category: 'Кардиганы', price: '8 990 ₽', color: 'Черный' },
-    { id: '6', name: 'Футболка базовая', category: 'Футболки', price: '1 990 ₽', color: 'Белый' }
+  const garments: Garment[] = [
+    { id: '1', name: 'Классическая рубашка', category: 'Рубашки', price: '4 990 ₽', priceValue: 4990, color: 'Белый' },
+    { id: '2', name: 'Брюки чинос', category: 'Брюки', price: '5 990 ₽', priceValue: 5990, color: 'Бежевый' },
+    { id: '3', name: 'Шерстяной свитер', category: 'Свитера', price: '7 990 ₽', priceValue: 7990, color: 'Серый' },
+    { id: '4', name: 'Джинсы slim fit', category: 'Джинсы', price: '6 490 ₽', priceValue: 6490, color: 'Синий' },
+    { id: '5', name: 'Кардиган', category: 'Кардиганы', price: '8 990 ₽', priceValue: 8990, color: 'Черный' },
+    { id: '6', name: 'Футболка базовая', category: 'Футболки', price: '1 990 ₽', priceValue: 1990, color: 'Белый' }
   ];
+
+  const addToCart = (garment: Garment) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === garment.id);
+      if (existingItem) {
+        return prevCart.map(item =>
+          item.id === garment.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prevCart, { ...garment, quantity: 1 }];
+    });
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== id));
+  };
+
+  const updateQuantity = (id: string, change: number) => {
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + change) } : item
+      )
+    );
+  };
+
+  const getTotalPrice = () => {
+    return cart.reduce((sum, item) => sum + item.priceValue * item.quantity, 0);
+  };
+
+  const getTotalItems = () => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  };
 
   const scrollToSection = (sectionId: string) => {
     setActiveSection(sectionId);
@@ -30,13 +79,96 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">VIRTUOSO</h1>
           
-          <button 
-            className="lg:hidden"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle menu"
-          >
-            <Icon name={menuOpen ? "X" : "Menu"} size={24} />
-          </button>
+          <div className="flex items-center gap-4">
+            <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="relative">
+                  <Icon name="ShoppingCart" size={20} />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-lg">
+                <SheetHeader>
+                  <SheetTitle>Корзина</SheetTitle>
+                </SheetHeader>
+                <div className="mt-8 space-y-4">
+                  {cart.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Icon name="ShoppingBag" size={48} className="mx-auto mb-4 opacity-50" />
+                      <p>Корзина пуста</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {cart.map(item => (
+                          <Card key={item.id} className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-medium mb-1">{item.name}</h4>
+                                <p className="text-sm text-muted-foreground">{item.category}</p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => removeFromCart(item.id)}
+                              >
+                                <Icon name="Trash2" size={16} />
+                              </Button>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => updateQuantity(item.id, -1)}
+                                  disabled={item.quantity === 1}
+                                >
+                                  <Icon name="Minus" size={14} />
+                                </Button>
+                                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => updateQuantity(item.id, 1)}
+                                >
+                                  <Icon name="Plus" size={14} />
+                                </Button>
+                              </div>
+                              <p className="font-semibold">{(item.priceValue * item.quantity).toLocaleString()} ₽</p>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                      <div className="border-t pt-4 space-y-4">
+                        <div className="flex justify-between items-center text-lg font-semibold">
+                          <span>Итого:</span>
+                          <span>{getTotalPrice().toLocaleString()} ₽</span>
+                        </div>
+                        <Button className="w-full" size="lg">
+                          Оформить заказ
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <button 
+              className="lg:hidden"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Toggle menu"
+            >
+              <Icon name={menuOpen ? "X" : "Menu"} size={24} />
+            </button>
+          </div>
 
           <div className={`${menuOpen ? 'flex' : 'hidden'} lg:flex absolute lg:relative top-full left-0 right-0 lg:top-auto flex-col lg:flex-row gap-8 bg-background lg:bg-transparent p-4 lg:p-0 border-b lg:border-0 border-border`}>
             {['home', 'fitting', 'catalog', 'about', 'contact'].map((section) => (
@@ -148,8 +280,13 @@ const Index = () => {
                             size="sm" 
                             variant="ghost"
                             className="mt-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(garment);
+                            }}
                           >
-                            Примерить
+                            <Icon name="Plus" size={14} className="mr-1" />
+                            В корзину
                           </Button>
                         </div>
                       </div>
@@ -187,15 +324,24 @@ const Index = () => {
                     <h3 className="font-medium mb-2">{garment.name}</h3>
                     <div className="flex items-center justify-between">
                       <p className="text-lg font-semibold">{garment.price}</p>
-                      <Button 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedGarment(garment.id);
-                          scrollToSection('fitting');
-                        }}
-                      >
-                        Примерить
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedGarment(garment.id);
+                            scrollToSection('fitting');
+                          }}
+                        >
+                          Примерить
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={() => addToCart(garment)}
+                        >
+                          <Icon name="ShoppingCart" size={16} />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </Card>
